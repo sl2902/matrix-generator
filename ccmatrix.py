@@ -26,10 +26,11 @@ def main(stdcsr):
     height, width = stdcsr.getmaxyx()
 
     col = width // 2
-    row = 0
+    head_row = 0
+    trail_length = 12
 
     char = random.choice(string.ascii_uppercase + string.digits)
-
+    trail = []
     while True:
         try:
             key = stdcsr.getch()
@@ -40,16 +41,36 @@ def main(stdcsr):
             pass
 
         stdcsr.clear()
-
-        if row < height:
-            stdcsr.addch(row, col, ord(char))
-            row += 1
-        else:
-            row = 0
+        head_row += 1
+        if head_row - trail_length > height:
+            head_row = 0
             col = random.randint(0, width - 1)
-            char = random.choice(string.ascii_uppercase + string.digits)
+            trail.clear()
+
+        char = random.choice(string.ascii_uppercase + string.digits)
+        trail.insert(0, (head_row, char))
+
+        if len(trail) > trail_length:
+            trail.pop()
+
+        for i, (r, c) in enumerate(trail):
+            if 0 <= r < height:
+                attr = WHITE if i == 0 else GREEN
+                try:
+                    stdcsr.addch(r, col, ord(c), attr)
+                except curses.error:
+                    pass
+            
+        # if row < height:
+        #     stdcsr.addch(row, col, ord(char))
+        #     row += 1
+        # else:
+        #     row = 0
+        #     col = random.randint(0, width - 1)
+        #     char = random.choice(string.ascii_uppercase + string.digits)
 
         stdcsr.refresh()
+        time.sleep(0.05)
 
 if __name__ == "__main__":
     curses.wrapper(main)
