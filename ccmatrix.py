@@ -29,6 +29,16 @@ def main(stdcsr):
     head_row = 0
     trail_length = 12
 
+    columns = []
+    for _ in range(width):
+        columns.append({
+            'y': random.randint(-height, 0),
+            'speed': random.randint(1, 3),
+            'tick': 0,
+            'length': random.randint(5, 20),
+            'chars': [random.choice(string.ascii_uppercase + string.digits) for _ in range(35)]
+        })
+
     char = random.choice(string.ascii_uppercase + string.digits)
     trail = []
     while True:
@@ -41,33 +51,31 @@ def main(stdcsr):
             pass
 
         stdcsr.clear()
-        head_row += 1
-        if head_row - trail_length > height:
-            head_row = 0
-            col = random.randint(0, width - 1)
-            trail.clear()
 
-        char = random.choice(string.ascii_uppercase + string.digits)
-        trail.insert(0, (head_row, char))
+        for col, data in enumerate(columns[:width]):
+            data['tick'] += 1
+            if data['tick'] >= data['speed']:
+                data['tick'] = 0
+                data['y'] += 1
 
-        if len(trail) > trail_length:
-            trail.pop()
+                data['chars'].insert(0, random.choice(string.ascii_uppercase + string.digits))
+                if len(data['chars']) > data['length']:
+                    data['chars'].pop()
 
-        for i, (r, c) in enumerate(trail):
-            if 0 <= r < height:
-                attr = WHITE if i == 0 else GREEN
-                try:
-                    stdcsr.addch(r, col, ord(c), attr)
-                except curses.error:
-                    pass
-            
-        # if row < height:
-        #     stdcsr.addch(row, col, ord(char))
-        #     row += 1
-        # else:
-        #     row = 0
-        #     col = random.randint(0, width - 1)
-        #     char = random.choice(string.ascii_uppercase + string.digits)
+                if data['y'] - data['length'] > height:
+                    data['y'] = random.randint(-height, 0)
+                    data['length'] = random.randint(5, 20)
+                    data['speed'] = random.randint(1, 3)
+
+            head_y = data['y']
+            for i, char in enumerate(data['chars']):
+                row = head_y - i
+                if 0 <= row < height:
+                    attr = WHITE if i == 0 else GREEN
+                    try:
+                        stdcsr.addch(row, col, ord(char), attr)
+                    except curses.error:
+                        pass
 
         stdcsr.refresh()
         time.sleep(0.05)
