@@ -2,8 +2,9 @@ import curses
 import random
 import time
 import string
+import argparse
 
-def main(stdcsr):
+def main(stdcsr, screensaver_mode):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
     """
@@ -18,6 +19,9 @@ def main(stdcsr):
     # define color pairs
     curses.init_pair(1, curses.COLOR_GREEN, -1)
     curses.init_pair(2, curses.COLOR_WHITE, -1)
+
+    if screensaver_mode:
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
     GREEN = curses.color_pair(1)
     WHITE = curses.color_pair(2) | curses.A_BOLD
@@ -45,8 +49,9 @@ def main(stdcsr):
         try:
             key = stdcsr.getch()
 
-            if key == ord('q'):
-                break
+            if key != curses.ERR:
+                if screensaver_mode or key == ord('q'):
+                    break
         except Exception:
             pass
 
@@ -81,4 +86,17 @@ def main(stdcsr):
         time.sleep(0.05)
 
 if __name__ == "__main__":
-    curses.wrapper(main)
+    parser = argparse.ArgumentParser(description="Matrix-style terminal screensaver.")
+    parser.add_argument(
+        '-s', 
+        '--screensaver', 
+        dest="s", 
+        action='store_true', 
+        help="Screensaver mode: exit on any key or mouse event"
+    )
+    args = parser.parse_args()
+
+    try:
+        curses.wrapper(main, args.s)
+    except KeyboardInterrupt:
+        pass
