@@ -4,13 +4,18 @@ import time
 import string
 import argparse
 
-def main(stdcsr, screensaver_mode):
+def speed_to_timeout(u: int):
+    """Map speed value (0-10) to a terminal input timeout in milliseconds."""
+    # 0 is fastest (10ms), 10 is slowest (120ms)
+    return max(10, u * 12)
+
+def main(stdcsr, screensaver_mode, timeout):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
     """
     curses.curs_set(0)
     stdcsr.nodelay(True)
-    stdcsr.timeout(100)
+    stdcsr.timeout(speed_to_timeout(timeout))
 
     # initialize colors
     curses.start_color()
@@ -94,9 +99,19 @@ if __name__ == "__main__":
         action='store_true', 
         help="Screensaver mode: exit on any key or mouse event"
     )
+    parser.add_argument(
+        '-u',
+        type=int,
+        default=4,
+        help="Update delay (0-10, default 4)"
+    )
     args = parser.parse_args()
 
+    if args.u < 0 or args.u > 10:
+        print("Error: Update delay must be between 0 and 10.")
+        exit(1)
+
     try:
-        curses.wrapper(main, args.s)
+        curses.wrapper(main, args.s, args.u)
     except KeyboardInterrupt:
         pass
