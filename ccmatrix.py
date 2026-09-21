@@ -95,6 +95,9 @@ def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode):
             if key != curses.ERR:
                 if screensaver_mode or key == ord('q'):
                     break
+                elif ord('0') <= key <= ord('9'):
+                    speed = key - ord('0')
+                    stdcsr.timeout(speed_to_timeout(speed))
         except Exception:
             pass
 
