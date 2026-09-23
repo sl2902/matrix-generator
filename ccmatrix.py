@@ -29,7 +29,16 @@ def speed_to_timeout(u: int):
     # 0 is fastest (10ms), 10 is slowest (120ms)
     return max(10, u * 12)
 
-def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode, katakana_mode):
+def main(
+        stdcsr, 
+        screensaver_mode, 
+        timeout, 
+        color_name, 
+        rainbow_mode, 
+        katakana_mode,
+        bold_some, 
+        bold_all,
+    ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
     """
@@ -86,14 +95,18 @@ def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode, katakana_m
 
     char_pool = KATAKANA_CHARS if katakana_mode else LATIN_CHARS
     for _ in range(width):
+        col_chars = []
+        for _ in range(25):
+            char = random.choice(char_pool)
+            color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
+            is_bold = bold_all or (bold_some and random.random() < 0.25)
+            col_chars.append((char, color, is_bold))
         columns.append({
             'y': random.randint(-height, 0),
             'speed': random.randint(1, 3),
             'tick': 0,
             'length': random.randint(5, 20),
-            'chars': [(random.choice(char_pool),
-                        random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR)
-                        for _ in range(25)]
+            'chars': col_chars,
         })
 
     while True:
@@ -106,14 +119,18 @@ def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode, katakana_m
                     # Adjust columns list to match new terminal width
                     if len(columns) < width:
                         for _ in range(width - len(columns)):
+                            col_chars = []
+                            for _ in range(25):
+                                char = random.choice(char_pool)
+                                color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
+                                is_bold = bold_all or (bold_some and random.random() < 0.25)
+                                col_chars.append((char, color, is_bold))
                             columns.append({
                                 'y': random.randint(-height, 0),
                                 'speed': random.randint(1, 3),
                                 'tick': 0,
                                 'length': random.randint(5, 20),
-                                'chars': [(random.choice(char_pool), 
-                                           random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR) 
-                                          for _ in range(25)]
+                                'chars': col_chars
                             })
                     elif len(columns) > width:
                         columns = columns[:width]
@@ -138,7 +155,8 @@ def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode, katakana_m
 
                 new_char = random.choice(char_pool)
                 new_color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
-                data['chars'].insert(0, (new_char, new_color))
+                new_bold = bold_all or (bold_some and random.random() < 0.25)
+                data['chars'].insert(0, (new_char, new_color, new_bold))
                 if len(data['chars']) > data['length']:
                     data['chars'].pop()
 
@@ -148,10 +166,15 @@ def main(stdcsr, screensaver_mode, timeout, color_name, rainbow_mode, katakana_m
                     data['speed'] = random.randint(1, 3)
 
             head_y = data['y']
-            for i, (char, color) in enumerate(data['chars']):
+            for i, (char, color, is_bold) in enumerate(data['chars']):
                 row = head_y - i
                 if 0 <= row < height:
-                    attr = WHITE if i == 0 else color
+                    if i == 0:
+                        attr = WHITE
+                    else:
+                        attr = color
+                        if is_bold or bold_all:
+                            attr |= curses.A_BOLD
                     try:
                         stdcsr.addch(row, col, char, attr)
                     except curses.error:
@@ -191,6 +214,16 @@ if __name__ == "__main__":
         action='store_true', 
         help='Use Katakana characters'
     )
+    parser.add_argument(
+        '-b', 
+        action='store_true', 
+        help='Some bold characters'
+    )
+    parser.add_argument(
+        '-B', 
+        action='store_true', 
+        help='All bold characters'
+    )
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -205,6 +238,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c)
+        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B)
     except KeyboardInterrupt:
         pass
