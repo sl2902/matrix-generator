@@ -38,6 +38,7 @@ def main(
         katakana_mode,
         bold_some, 
         bold_all,
+        async_mode,
     ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
@@ -103,7 +104,7 @@ def main(
             col_chars.append((char, color, is_bold))
         columns.append({
             'y': random.randint(-height, 0),
-            'speed': random.randint(1, 3),
+            'speed': random.randint(1, 4) if async_mode else 2,
             'tick': 0,
             'length': random.randint(5, 20),
             'chars': col_chars,
@@ -127,7 +128,7 @@ def main(
                                 col_chars.append((char, color, is_bold))
                             columns.append({
                                 'y': random.randint(-height, 0),
-                                'speed': random.randint(1, 3),
+                                'speed': random.randint(1, 4) if async_mode else 2,
                                 'tick': 0,
                                 'length': random.randint(5, 20),
                                 'chars': col_chars
@@ -163,8 +164,7 @@ def main(
                 if data['y'] - data['length'] > height:
                     data['y'] = random.randint(-height, 0)
                     data['length'] = random.randint(5, 20)
-                    data['speed'] = random.randint(1, 3)
-
+                    data['speed'] = random.randint(1, 4) if async_mode else 2
             head_y = data['y']
             for i, (char, color, is_bold) in enumerate(data['chars']):
                 row = head_y - i
@@ -224,6 +224,11 @@ if __name__ == "__main__":
         action='store_true', 
         help='All bold characters'
     )
+    parser.add_argument(
+        '-a', 
+        action='store_true',
+        help='Asynchronous scroll mode'
+    )
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -238,6 +243,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B)
+        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a)
     except KeyboardInterrupt:
         pass
