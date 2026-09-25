@@ -39,6 +39,7 @@ def main(
         bold_some, 
         bold_all,
         async_mode,
+        message,
     ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
@@ -92,22 +93,42 @@ def main(
     # head_row = 0
     # trail_length = 12
 
-    columns = []
-
+    
     char_pool = KATAKANA_CHARS if katakana_mode else LATIN_CHARS
-    for _ in range(width):
-        col_chars = []
-        for _ in range(25):
-            char = random.choice(char_pool)
-            color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
-            is_bold = bold_all or (bold_some and random.random() < 0.25)
-            col_chars.append((char, color, is_bold))
+    def generate_column_chars(length, custom_text=None):
+            col_chars = []
+            if custom_text:
+                text_chars = list(custom_text)
+                for i in range(length):
+                    char = text_chars[i % len(text_chars)]
+                    # Give message characters a distinct standout color (e.g., Yellow or White)
+                    color = curses.color_pair(5) | curses.A_BOLD if not rainbow_mode else random.choice(rainbow_pairs)
+                    is_bold = True
+                    col_chars.append((char, color, is_bold))
+            else:
+                for _ in range(length):
+                    char = random.choice(char_pool)
+                    color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
+                    if bold_all:
+                        is_bold = True
+                    elif bold_some:
+                        is_bold = random.random() < 0.25
+                    else:
+                        is_bold = False
+                    col_chars.append((char, color, is_bold))
+            return col_chars
+
+    columns = []
+    for i in range(width):
+        length = random.randint(5, 25)
+        col_text = message if (message and random.random() < 0.15) else None
         columns.append({
             'y': random.randint(-height, 0),
             'speed': random.randint(1, 4) if async_mode else 2,
             'tick': 0,
             'length': random.randint(5, 20),
-            'chars': col_chars,
+            'chars': generate_column_chars(length, col_text),
+            'has_message': col_text is not None
         })
 
     while True:
@@ -120,18 +141,14 @@ def main(
                     # Adjust columns list to match new terminal width
                     if len(columns) < width:
                         for _ in range(width - len(columns)):
-                            col_chars = []
-                            for _ in range(25):
-                                char = random.choice(char_pool)
-                                color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
-                                is_bold = bold_all or (bold_some and random.random() < 0.25)
-                                col_chars.append((char, color, is_bold))
+                            length = random.randint(5, 25)
                             columns.append({
                                 'y': random.randint(-height, 0),
                                 'speed': random.randint(1, 4) if async_mode else 2,
                                 'tick': 0,
-                                'length': random.randint(5, 20),
-                                'chars': col_chars
+                                'length': length,
+                                'chars': generate_column_chars(length),
+                                'has_message': False
                             })
                     elif len(columns) > width:
                         columns = columns[:width]
@@ -154,12 +171,18 @@ def main(
                 data['tick'] = 0
                 data['y'] += 1
 
-                new_char = random.choice(char_pool)
-                new_color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
-                new_bold = bold_all or (bold_some and random.random() < 0.25)
-                data['chars'].insert(0, (new_char, new_color, new_bold))
-                if len(data['chars']) > data['length']:
-                    data['chars'].pop()
+                if data['has_message']:
+                    # Rotate message characters smoothly as it falls
+                    char, color, is_bold = data['chars'].pop()
+                    data['chars'].insert(0, (char, color, is_bold))
+                else:
+                    new_char = random.choice(char_pool)
+                    new_color = random.choice(rainbow_pairs) if rainbow_mode else BASE_COLOR
+                    new_bold = bold_all or (bold_some and random.random() < 0.25)
+                    
+                    data['chars'].insert(0, (new_char, new_color, new_bold))
+                    if len(data['chars']) > data['length']:
+                        data['chars'].pop()
 
                 if data['y'] - data['length'] > height:
                     data['y'] = random.randint(-height, 0)
@@ -229,6 +252,12 @@ if __name__ == "__main__":
         action='store_true',
         help='Asynchronous scroll mode'
     )
+    parser.add_argument(
+        '-m', 
+        type=str, 
+        default='', 
+        help='Custom message to inject'
+    )
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -243,6 +272,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a)
+        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m)
     except KeyboardInterrupt:
         pass
