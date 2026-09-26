@@ -40,6 +40,7 @@ def main(
         bold_all,
         async_mode,
         message,
+        dim_tail,
     ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
@@ -198,6 +199,9 @@ def main(
                         attr = color
                         if is_bold or bold_all:
                             attr |= curses.A_BOLD
+                        # Apply fade-out dimming to the tail if requested
+                        if dim_tail and i >= random.randint(3, 6):  # Randomly dim some of the tail characters
+                            attr |= curses.A_DIM
                     try:
                         stdcsr.addch(row, col, char, attr)
                     except curses.error:
@@ -258,6 +262,12 @@ if __name__ == "__main__":
         default='', 
         help='Custom message to inject'
     )
+    parser.add_argument(
+        '-o',
+        action='store_true', 
+        help='Fade-out tail dimming mode'
+    )
+    args = parser.parse_args()
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -272,6 +282,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m)
+        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m, args.o)
     except KeyboardInterrupt:
         pass
