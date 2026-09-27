@@ -41,6 +41,7 @@ def main(
         async_mode,
         message,
         dim_tail,
+        true_color,
     ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
@@ -62,6 +63,23 @@ def main(
     curses.init_pair(6, curses.COLOR_CYAN, -1)
     curses.init_pair(7, curses.COLOR_MAGENTA, -1)
     curses.init_pair(8, curses.COLOR_BLACK, -1)
+
+    # If true color / 256-color mode is supported, set up dynamic gradient slots (pairs 10-50)
+    if true_color and curses.COLORS >= 256:
+        base_c = COLOR_MAP[color_name]
+        # Map base colors to 256-color extended palette ranges for smooth steps
+        palette_starts = {
+            curses.COLOR_GREEN: 22,   # dark green to bright green ramp
+            curses.COLOR_RED: 52,     # dark red to bright red ramp
+            curses.COLOR_BLUE: 17,    # dark blue to bright blue ramp
+            curses.COLOR_CYAN: 24,    # dark cyan to bright cyan ramp
+            curses.COLOR_YELLOW: 130, # dark yellow to bright yellow ramp
+            curses.COLOR_MAGENTA: 53, # dark magenta to bright magenta ramp
+            curses.COLOR_WHITE: 232,  # grayscale ramp
+        }
+        start_idx = palette_starts.get(base_c, 22)
+        for step in range(15):
+            curses.init_pair(50 + step, start_idx + step, -1)
 
     if screensaver_mode:
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
@@ -189,7 +207,15 @@ def main(
                     data['y'] = random.randint(-height, 0)
                     data['length'] = random.randint(5, 20)
                     data['speed'] = random.randint(1, 4) if async_mode else 2
+                    if message and random.random() < 0.15:
+                        data['has_message'] = True
+                        data['chars'] = generate_column_chars(data['length'], message)
+                    else:
+                        data['has_message'] = False
+                        data['chars'] = generate_column_chars(data['length'])
+
             head_y = data['y']
+            trail_len = len(data['chars'])
             for i, (char, color, is_bold) in enumerate(data['chars']):
                 row = head_y - i
                 if 0 <= row < height:
@@ -199,8 +225,14 @@ def main(
                         attr = color
                         if is_bold or bold_all:
                             attr |= curses.A_BOLD
+
+                        # Apply True Color smooth gradient fade along the trail
+                        if true_color and curses.COLORS >= 256 and not rainbow_mode:
+                            # Map position i along trail length to a fade step (0 to 14)
+                            fade_step = min(14, int((i / max(1, trail_len)) * 15))
+                            attr = curses.color_pair(50 + (14 - fade_step))
                         # Apply fade-out dimming to the tail if requested
-                        if dim_tail and i >= random.randint(3, 6):  # Randomly dim some of the tail characters
+                        elif dim_tail and i >= random.randint(3, 6):  # Randomly dim some of the tail characters
                             attr |= curses.A_DIM
                     try:
                         stdcsr.addch(row, col, char, attr)
@@ -267,7 +299,13 @@ if __name__ == "__main__":
         action='store_true', 
         help='Fade-out tail dimming mode'
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        '-t', 
+        '--truecolor', 
+        dest='t',
+        action='store_true', 
+        help='Enable true color smooth gradients'
+    )
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -282,6 +320,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m, args.o)
+        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m, args.o, args.t)
     except KeyboardInterrupt:
         pass
