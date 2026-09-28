@@ -182,7 +182,7 @@ def main(
         except Exception:
             pass
 
-        stdcsr.clear()
+        stdcsr.erase()
 
         for col, data in enumerate(columns[:width]):
             data['tick'] += 1
@@ -240,7 +240,7 @@ def main(
                         pass
 
         stdcsr.refresh()
-        time.sleep(0.05)
+        # time.sleep(0.05)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Matrix-style terminal screensaver.")
