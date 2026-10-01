@@ -82,7 +82,11 @@ def main(
             curses.init_pair(50 + step, start_idx + step, -1)
 
     if screensaver_mode:
-        curses.mousemask(curses.ALL_MOUSE_EVENTS)
+        # Enable mouse event capture for screensaver wake-up triggers
+        try:
+            curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+        except Exception:
+            pass
 
     GREEN = curses.color_pair(1)
     WHITE = curses.color_pair(2) | curses.A_BOLD
@@ -172,6 +176,12 @@ def main(
                     elif len(columns) > width:
                         columns = columns[:width]
                 elif screensaver_mode:
+                    # In screensaver mode, any keystroke or mouse interaction wakes it up immediately
+                    if key == curses.KEY_MOUSE:
+                        try:
+                            curses.getmouse()
+                        except Exception:
+                            pass
                     break
                 else:
                     if key == ord('q'):
