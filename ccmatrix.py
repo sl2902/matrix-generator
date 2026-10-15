@@ -5,6 +5,8 @@ import string
 import argparse
 import sys
 import locale
+from configparser import ConfigParser
+from pathlib import Path
 
 # Set locale to support UTF-8 (essential for Katakana characters)
 locale.setlocale(locale.LC_ALL, '')
@@ -23,6 +25,16 @@ COLOR_MAP = {
 LATIN_CHARS = string.ascii_uppercase + string.digits
 # Half-width Katakana Unicode range
 KATAKANA_CHARS = [chr(c) for c in range(0xFF65, 0xFF9F)]
+
+def load_config():
+    config_path = Path.cwd() / 'config.ini'
+    config = ConfigParser()
+    if config_path.exists():
+        try:
+            config.read(config_path)
+        except Exception as e:
+            print(f"Error reading config file: {e}", file=sys.stderr)
+    return config
 
 def speed_to_timeout(u: int):
     """Map speed value (0-10) to a terminal input timeout in milliseconds."""
@@ -253,6 +265,20 @@ def main(
         # time.sleep(0.05)
 
 if __name__ == "__main__":
+    config = load_config()
+    section = 'matrix'
+
+    cfg_speed = config.getint(section, 'speed', fallback=4) if config.has_option(section, 'speed') else 4
+    cfg_color = config.get(section, 'color', fallback='green') if config.has_option(section, 'color') else 'green'
+    cfg_rainbow = config.getboolean(section, 'rainbow', fallback=False) if config.has_option(section, 'rainbow') else False
+    cfg_kakatana = config.getboolean(section, 'katakana', fallback=False) if config.has_option(section, 'katakana') else False
+    cfg_bold_some = config.getboolean(section, 'bold_some', fallback=False) if config.has_option(section, 'bold_some') else False
+    cfg_bold_all = config.getboolean(section, 'bold_all', fallback=False) if config.has_option(section, 'bold_all') else False
+    cfg_async = config.getboolean(section, 'async', fallback=False) if config.has_option(section, 'async') else False
+    cfg_message = config.get(section, 'message', fallback='') if config.has_option(section, 'message') else ''
+    cfg_dim_tail = config.getboolean(section, 'dim_tail', fallback=False) if config.has_option(section, 'dim_tail') else False
+    cfg_true_color = config.getboolean(section, 'true_color', fallback=False) if config.has_option(section, 'true_color') else False
+
     parser = argparse.ArgumentParser(description="Matrix-style terminal screensaver.")
     parser.add_argument(
         '-s', 
@@ -264,13 +290,13 @@ if __name__ == "__main__":
     parser.add_argument(
         '-u',
         type=int,
-        default=4,
+        default=cfg_speed,
         help="Update delay (0-10, default 4)"
     )
     parser.add_argument(
         '-C', 
         type=str, 
-        default='green', 
+        default=cfg_color, 
         help='Trail color (green, red, blue, white, yellow, cyan, magenta, black)'
     )
     parser.add_argument(
@@ -280,33 +306,38 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '-c', 
-        action='store_true', 
+        action='store_true',
+        default=cfg_kakatana,
         help='Use Katakana characters'
     )
     parser.add_argument(
         '-b', 
-        action='store_true', 
+        action='store_true',
+        default=cfg_bold_some,
         help='Some bold characters'
     )
     parser.add_argument(
         '-B', 
-        action='store_true', 
+        action='store_true',
+        default=cfg_bold_all,
         help='All bold characters'
     )
     parser.add_argument(
         '-a', 
         action='store_true',
+        default=cfg_async,
         help='Asynchronous scroll mode'
     )
     parser.add_argument(
         '-m', 
         type=str, 
-        default='', 
+        default=cfg_message, 
         help='Custom message to inject'
     )
     parser.add_argument(
         '-o',
-        action='store_true', 
+        action='store_true',
+        default=cfg_dim_tail,
         help='Fade-out tail dimming mode'
     )
     parser.add_argument(
