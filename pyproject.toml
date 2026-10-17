@@ -1,0 +1,8 @@
+[project]
+name = "ccmatrix"
+version = "0.1.0"
+description = "Matrix Digital Rain screensaver"
+requires-python = ">=3.12"
+dependencies = [
+    
+]
