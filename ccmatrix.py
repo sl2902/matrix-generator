@@ -25,6 +25,8 @@ COLOR_MAP = {
 LATIN_CHARS = string.ascii_uppercase + string.digits
 # Half-width Katakana Unicode range
 KATAKANA_CHARS = [chr(c) for c in range(0xFF65, 0xFF9F)]
+SMILEY_AND_EMOTIONS = [chr(c) for c in range(0x1F600, 0x1F64F)]
+PEOPLE = [chr(c) for c in range(0x1F600, 0x1F64F)]
 
 def load_config():
     config_path = Path.cwd() / 'config.ini'
@@ -54,6 +56,8 @@ def main(
         message,
         dim_tail,
         true_color,
+        smiley_mode,
+        people_mode,
     ):
     """
     Setup terminal: hide cursor, enable non-blocking input with a delay
@@ -129,7 +133,15 @@ def main(
     # trail_length = 12
 
     
-    char_pool = KATAKANA_CHARS if katakana_mode else LATIN_CHARS
+    # char_pool = KATAKANA_CHARS if katakana_mode else LATIN_CHARS
+    if katakana_mode:
+        char_pool = KATAKANA_CHARS
+    elif smiley_mode:
+        char_pool = SMILEY_AND_EMOTIONS
+    elif people_mode:
+        char_pool = PEOPLE
+    else:
+        char_pool = LATIN_CHARS
     def generate_column_chars(length, custom_text=None):
             col_chars = []
             if custom_text:
@@ -278,6 +290,8 @@ if __name__ == "__main__":
     cfg_message = config.get(section, 'message', fallback='') if config.has_option(section, 'message') else ''
     cfg_dim_tail = config.getboolean(section, 'dim_tail', fallback=False) if config.has_option(section, 'dim_tail') else False
     cfg_true_color = config.getboolean(section, 'true_color', fallback=False) if config.has_option(section, 'true_color') else False
+    cfg_smiley = config.getboolean(section, 'smiley', fallback=False) if config.has_option(section, 'smiley') else False
+    cfg_people = config.getboolean(section, 'people', fallback=False) if config.has_option(section, 'people') else False
 
     parser = argparse.ArgumentParser(description="Matrix-style terminal screensaver.")
     parser.add_argument(
@@ -347,6 +361,18 @@ if __name__ == "__main__":
         action='store_true', 
         help='Enable true color smooth gradients'
     )
+    parser.add_argument(
+        '-se', 
+        action='store_true',
+        default=cfg_smiley,
+        help='Use Smiley and Emotions characters'
+    )
+    parser.add_argument(
+        '-pp', 
+        action='store_true',
+        default=cfg_people,
+        help='Use People characters'
+    )
     args = parser.parse_args()
 
     if args.u < 0 or args.u > 10:
@@ -361,6 +387,21 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        curses.wrapper(main, args.s, args.u, args.C, args.r, args.c, args.b, args.B, args.a, args.m, args.o, args.t)
+        curses.wrapper(
+            main, 
+            args.s, 
+            args.u, 
+            args.C, 
+            args.r, 
+            args.c, 
+            args.b, 
+            args.B, 
+            args.a, 
+            args.m, 
+            args.o, 
+            args.t, 
+            args.se,
+            args.pp
+        )
     except KeyboardInterrupt:
         pass
